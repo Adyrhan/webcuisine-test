@@ -105,6 +105,12 @@ public class PictureInfoListActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onSaveInstanceState(Bundle out) {
+        super.onSaveInstanceState(out);
+        out.putParcelable(PICTURES_KEY, mPictures);
+    }
+
     private void setupRecyclerView(@NonNull RecyclerView recyclerView) {
         mRecyclerViewAdapter = new PictureRecyclerViewAdapter();
         recyclerView.setAdapter(mRecyclerViewAdapter);

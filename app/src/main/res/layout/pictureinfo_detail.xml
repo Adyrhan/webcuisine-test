@@ -1,6 +1,16 @@
-<ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/pictureinfo_detail"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="perez.adrian.webcuisine_test.PictureInfoDetailFragment" />
+    android:background="@android:color/black"
+    android:fitsSystemWindows="false"
+    android:gravity="center">
+    <ImageView
+        android:id="@+id/image_view"
+        android:layout_centerInParent="true"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        tools:context="perez.adrian.webcuisine_test.PictureInfoDetailFragment" />
+</RelativeLayout>
+
