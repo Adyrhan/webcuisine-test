@@ -2,22 +2,31 @@ package perez.adrian.webcuisine_test;
 
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
 
-import perez.adrian.webcuisine_test.dummy.DummyContent;
+import com.bumptech.glide.Glide;
+import com.makeramen.roundedimageview.RoundedImageView;
 
-import java.util.List;
+import java.util.ArrayList;
+
+import perez.adrian.webcuisine_test.api.NasaAPI;
+import perez.adrian.webcuisine_test.data.PictureInfo;
+import perez.adrian.webcuisine_test.data.Pictures;
+import perez.adrian.webcuisine_test.data.PicturesConverterFactory;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
 
 /**
  * An activity representing a list of Pictures. This activity
@@ -29,11 +38,14 @@ import java.util.List;
  */
 public class PictureInfoListActivity extends AppCompatActivity {
 
+    private static final String PICTURES_KEY = "PICTURES_KEY";
     /**
      * Whether or not the activity is in two-pane mode, i.e. running on a tablet
      * device.
      */
     private boolean mTwoPane;
+    private PictureRecyclerViewAdapter mRecyclerViewAdapter;
+    private Pictures mPictures;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,15 +55,6 @@ public class PictureInfoListActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         toolbar.setTitle(getTitle());
-
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
 
         View recyclerView = findViewById(R.id.pictureinfo_list);
         assert recyclerView != null;
@@ -64,19 +67,65 @@ public class PictureInfoListActivity extends AppCompatActivity {
             // activity should be in two-pane mode.
             mTwoPane = true;
         }
+
+        if (savedInstanceState != null) {
+            mPictures = savedInstanceState.getParcelable(PICTURES_KEY);
+            feedAdapter();
+        } else {
+            retrieveData();
+        }
+    }
+
+    private void retrieveData() {
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("https://api.nasa.gov")
+                .addConverterFactory(new PicturesConverterFactory())
+                .build();
+        NasaAPI nasaAPI = retrofit.create(NasaAPI.class);
+        nasaAPI.getPictures().enqueue(new Callback<Pictures>() {
+            @Override
+            public void onResponse(Call<Pictures> call, Response<Pictures> response) {
+                mPictures = response.body();
+                feedAdapter();
+            }
+
+            @Override
+            public void onFailure(Call<Pictures> call, Throwable t) {
+
+            }
+        });
+    }
+
+    private void feedAdapter() {
+        ArrayList<PictureInfo> pictures = mPictures.getPictures();
+        if (pictures != null) {
+            for (PictureInfo picture : mPictures.getPictures()) {
+                mRecyclerViewAdapter.add(picture);
+            }
+        }
     }
 
     private void setupRecyclerView(@NonNull RecyclerView recyclerView) {
-        recyclerView.setAdapter(new SimpleItemRecyclerViewAdapter(DummyContent.ITEMS));
+        mRecyclerViewAdapter = new PictureRecyclerViewAdapter();
+        recyclerView.setAdapter(mRecyclerViewAdapter);
     }
 
-    public class SimpleItemRecyclerViewAdapter
-            extends RecyclerView.Adapter<SimpleItemRecyclerViewAdapter.ViewHolder> {
+    public class PictureRecyclerViewAdapter
+            extends RecyclerView.Adapter<PictureRecyclerViewAdapter.ViewHolder> {
 
-        private final List<DummyContent.DummyItem> mValues;
+        private final ArrayList<PictureInfo> mValues = new ArrayList<>();
 
-        public SimpleItemRecyclerViewAdapter(List<DummyContent.DummyItem> items) {
-            mValues = items;
+        public PictureRecyclerViewAdapter() {
+        }
+
+        public void clear() {
+            mValues.clear();
+            notifyDataSetChanged();
+        }
+
+        public void add(PictureInfo info) {
+            mValues.add(info);
+            notifyItemInserted(mValues.size() - 1);
         }
 
         @Override
@@ -89,15 +138,19 @@ public class PictureInfoListActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(final ViewHolder holder, int position) {
             holder.mItem = mValues.get(position);
-            holder.mIdView.setText(mValues.get(position).id);
-            holder.mContentView.setText(mValues.get(position).content);
+            holder.mEarthDate.setText(holder.mItem.getEarthDate());
+            holder.mCameraFullName.setText(holder.mItem.getCamera().getFullName());
+            Glide.with(PictureInfoListActivity.this)
+                    .load(Uri.parse(holder.mItem.getPictureUrl()))
+                    .centerCrop()
+                    .into(holder.mImagePreview);
 
             holder.mView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     if (mTwoPane) {
                         Bundle arguments = new Bundle();
-                        arguments.putString(PictureInfoDetailFragment.ARG_ITEM_ID, holder.mItem.id);
+                        arguments.putParcelable(PictureInfoDetailFragment.DATA_KEY, holder.mItem);
                         PictureInfoDetailFragment fragment = new PictureInfoDetailFragment();
                         fragment.setArguments(arguments);
                         getSupportFragmentManager().beginTransaction()
@@ -106,7 +159,7 @@ public class PictureInfoListActivity extends AppCompatActivity {
                     } else {
                         Context context = v.getContext();
                         Intent intent = new Intent(context, PictureInfoDetailActivity.class);
-                        intent.putExtra(PictureInfoDetailFragment.ARG_ITEM_ID, holder.mItem.id);
+                        intent.putExtra(PictureInfoDetailFragment.DATA_KEY, holder.mItem);
 
                         context.startActivity(intent);
                     }
@@ -121,20 +174,22 @@ public class PictureInfoListActivity extends AppCompatActivity {
 
         public class ViewHolder extends RecyclerView.ViewHolder {
             public final View mView;
-            public final TextView mIdView;
-            public final TextView mContentView;
-            public DummyContent.DummyItem mItem;
+            public final TextView mEarthDate;
+            public final TextView mCameraFullName;
+            public final RoundedImageView mImagePreview;
+            public PictureInfo mItem;
 
             public ViewHolder(View view) {
                 super(view);
                 mView = view;
-                mIdView = (TextView) view.findViewById(R.id.id);
-                mContentView = (TextView) view.findViewById(R.id.content);
+                mEarthDate = (TextView) view.findViewById(R.id.earth_date);
+                mCameraFullName = (TextView) view.findViewById(R.id.camera_full_name);
+                mImagePreview = (RoundedImageView) view.findViewById(R.id.image_preview);
             }
 
             @Override
             public String toString() {
-                return super.toString() + " '" + mContentView.getText() + "'";
+                return super.toString() + " '" + mCameraFullName.getText() + "'";
             }
         }
     }
