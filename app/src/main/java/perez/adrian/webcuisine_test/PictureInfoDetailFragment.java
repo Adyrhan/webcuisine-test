@@ -8,6 +8,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
@@ -53,6 +54,7 @@ public class PictureInfoDetailFragment extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.pictureinfo_detail, container, false);
         ImageView imageView = (ImageView) rootView.findViewById(R.id.image_view);
+        final ProgressBar pBar = (ProgressBar) rootView.findViewById(R.id.progress_bar);
         Glide.with(this)
                 .load(Uri.parse(mPictureInfo.getPictureUrl()))
                 .fitCenter()
@@ -66,6 +68,7 @@ public class PictureInfoDetailFragment extends Fragment {
                     @Override
                     public boolean onResourceReady(GlideDrawable resource, Uri model, Target<GlideDrawable> target, boolean isFromMemoryCache, boolean isFirstResource) {
                         Log.i(TAG, "Image ready from " + model.toString());
+                        pBar.setVisibility(View.GONE);
                         return false;
                     }
                 })

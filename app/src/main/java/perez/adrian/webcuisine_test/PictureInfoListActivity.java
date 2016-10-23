@@ -11,6 +11,7 @@ import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 
@@ -86,6 +87,8 @@ public class PictureInfoListActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call<Pictures> call, Response<Pictures> response) {
                 mPictures = response.body();
+                ProgressBar pBar = (ProgressBar) findViewById(R.id.progress_bar);
+                pBar.setVisibility(View.GONE);
                 feedAdapter();
             }
 
